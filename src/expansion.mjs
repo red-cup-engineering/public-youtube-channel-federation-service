@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { NODE_ROOT, contentId } from "./federation.mjs";
 const WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 export function loadExpansion(path = join(NODE_ROOT, "content/proposals/five-channel-expansion.json")) { return JSON.parse(readFileSync(path, "utf8")); }
-export function assayExpansion(proposal = loadExpansion(), assayedAt = new Date().toISOString()) {
+export function checkExpansion(proposal = loadExpansion(), assayedAt = new Date().toISOString()) {
   if (proposal?.type !== "FiveChannelPortfolioExpansionProposal" || proposal.version !== 1 || !String(proposal.status).startsWith("proposed-") || !Array.isArray(proposal.portfolio) || proposal.portfolio.length !== 5) throw new TypeError("five-channel expansion proposal is malformed or operative");
   const actors = proposal.portfolio.map((line) => line.channel); if (new Set(actors).size !== 5) throw new TypeError("five-channel proposal repeats a channel actor");
   const ai = proposal.portfolio.find((line) => line.line === "artificial-intelligence-history-and-frontiers"), business = proposal.portfolio.find((line) => line.line === "modern-business-practice");

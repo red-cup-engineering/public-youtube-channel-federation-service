@@ -53,11 +53,11 @@ export async function runYouTubePrivateDraftCli(argv,{
  if(typeof token!=='string'||!token.trim())
   throw new TypeError('YOUTUBE_OAUTH_ACCESS_TOKEN is required; never put OAuth credentials in GitHub or manifest');
  const options={prepared,stateFile:statePath,token};
- const receipt=command==='start'?
+ const record=command==='start'?
   await startYouTubePrivateDraft(options):
   await resumeYouTubePrivateDraft(options);
- write(JSON.stringify(receipt,null,2));
- return receipt;
+ write(JSON.stringify(record,null,2));
+ return record;
 }
 if(import.meta.main){
  runYouTubePrivateDraftCli(process.argv.slice(2))

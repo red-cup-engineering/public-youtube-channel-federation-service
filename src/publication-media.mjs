@@ -45,13 +45,13 @@ const publicVideoUrl = id => "https://www.youtube.com/watch?v=" + id;
  * Channel, source paths and provenance are supplied by the publisher owner,
  * never invented from a visitor's text query or guessed from clip filenames.
  */
-export function videoPublication({ channel, episode, metadata, transcript = "", provenance } = {}) {
+export function videoPublication({ channel, episode, metadata, transcript = "", provenance: origin } = {}) {
   const channelId = channel?.youtubeChannelId;
   const id = episode?.youtubeVideoId;
   if (!CHANNEL_ID.test(channelId ?? "") || !VIDEO_ID.test(id ?? "") ||
       episode?.stage !== "published" || episode?.thumbnailUploaded !== true ||
-      !Array.isArray(provenance?.sources) || provenance.sources.length < 1 ||
-      provenance.sources.some(v => !nonempty(v) || v.length > 2048))
+      !Array.isArray(origin?.sources) || origin.sources.length < 1 ||
+      origin.sources.some(v => !nonempty(v) || v.length > 2048))
     throw new TypeError("public video needs publisher-owned channel, published ID, thumbnail and source lineage");
   const name = text(metadata?.title, "title", 500);
   const description = text(metadata?.description, "description", 18000);
@@ -84,7 +84,7 @@ export function videoPublication({ channel, episode, metadata, transcript = "", 
     media, provenance: Object.freeze({
       kind: "causeway.youtube.publication",
       channelId, videoId: id,
-      sources: Object.freeze([...provenance.sources]),
+      sources: Object.freeze([...origin.sources]),
       publisher: text(channel.name, "channel"),
     }),
   });
@@ -95,9 +95,9 @@ export function videoPublication({ channel, episode, metadata, transcript = "", 
  * publisher has actually made them publicly accessible.
  */
 export function imagePublication({ url, name, description, alternateName,
-  keywords = [], datePublished, provenance, encodingFormat } = {}) {
-  if (!Array.isArray(provenance?.sources) || provenance.sources.length === 0 ||
-      provenance.sources.some(x => !nonempty(x)))
+  keywords = [], datePublished, provenance: origin, encodingFormat } = {}) {
+  if (!Array.isArray(origin?.sources) || origin.sources.length === 0 ||
+      origin.sources.some(x => !nonempty(x)))
     throw new TypeError("public image needs source lineage and independently published URL");
   const published = https(url);
   if (encodingFormat !== undefined && !/^image\/(?:png|jpeg|webp|avif|gif|svg\+xml)$/u.test(encodingFormat))
@@ -113,7 +113,7 @@ export function imagePublication({ url, name, description, alternateName,
     ...(keywords.length ? { keywords: tags(keywords) } : {}),
   });
   return Object.freeze({ media, provenance: Object.freeze({
-    kind: "causeway.image.publication", sources: Object.freeze([...provenance.sources]),
+    kind: "causeway.image.publication", sources: Object.freeze([...origin.sources]),
   }) });
 }
 

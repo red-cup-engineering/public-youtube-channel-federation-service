@@ -58,7 +58,7 @@ async function record(value, options) {
   const store = createSettlementStore({ settlementRoot: NODE_ROOT, agentUrl: options.witnessJournalAgentUrl ?? process.env.SEAVT_DOCUMENT_AGENT }); await store.record({ category, recordedAt: at, record: { ...value } });
 }
 
-export async function admitPortfolioSnapshot({ civilDay, deliveries = [] } = {}, options = {}) {
+export async function validatePortfolioSnapshot({ civilDay, deliveries = [] } = {}, options = {}) {
   const contract = covenant(); if (!day(civilDay) || deliveries.length !== contract.lines.length || typeof options.verifyDelivery !== "function") throw new TypeError("portfolio snapshot requires one verifier-backed delivery per covenant line");
   const actors = deliveries.map((delivery) => delivery?.actor); if (new Set(actors).size !== contract.lines.length || contract.lines.some((line) => !actors.includes(line.channel))) throw new TypeError("portfolio snapshot has missing, duplicate, or foreign channels");
   const reports = [];
@@ -81,7 +81,7 @@ export async function admitPortfolioSnapshot({ civilDay, deliveries = [] } = {},
   } finally { rmSync(lock, { recursive: true, force: true }); }
 }
 
-export function formProcurementOpportunities(snapshot, offeredAt = new Date().toISOString()) {
+export function formPurchasingOpportunities(snapshot, offeredAt = new Date().toISOString()) {
   if (!exactId(snapshot) || snapshot.type !== "FiveChannelPortfolioSnapshot" || snapshot.federation !== ACTOR || !Number.isFinite(Date.parse(offeredAt))) throw new TypeError("opportunities require an exact federation snapshot");
   return snapshot.reports.filter((report) => report.generationDeficit + report.releasePlanDeficit + report.publicationDeficit + report.bufferDeficitDays > 0).map((report) => {
     const object = { type: "ChannelPortfolioProcurementOpportunity", snapshot: snapshot.id, civilDay: snapshot.civilDay, channel: report.channel, line: report.line, deficits: { generationUnits: report.generationDeficit, releasePlanUnits: report.releasePlanDeficit, publicationUnits: report.publicationDeficit, bufferDays: report.bufferDeficitDays }, suggestedResponse: "channel-may-form-own-provider-neutral-procurement", spendingAuthority: "none", dispatchAuthority: "none", channelWriteAuthority: "none" };
