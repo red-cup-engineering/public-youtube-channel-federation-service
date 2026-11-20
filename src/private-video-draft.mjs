@@ -188,9 +188,9 @@ async function finish({state,path,prepared,token,fetch}){
  // A local source file that mutates during PUTs must not be reported as
  // the exact accepted film. YouTube offers no remote original-SHA readback.
  await verifyYouTubeDraftFilm(prepared);
- const record=await privateReadback({id:state.videoId,prepared,token,fetch});
- writeState(path,{...state,state:'PRIVATE_RECEIVED',receipt: record});
- return record;
+ const receipt=await privateReadback({id:state.videoId,prepared,token,fetch});
+ writeState(path,{...state,state:'PRIVATE_RECEIVED',receipt});
+ return receipt;
 }
 async function handleUploadReply({response,state,path,prepared,token,fetch}){
  if(response.status===200||response.status===201){
