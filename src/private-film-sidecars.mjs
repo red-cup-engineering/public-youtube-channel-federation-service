@@ -1,3 +1,4 @@
+import { assert } from "@red-cup-engineering/signcell/values";
 /**
  * Finish an ALREADY VERIFIED PRIVATE YouTube film with real captions and an
  * original source-film poster, through YouTube Data API.
@@ -19,9 +20,9 @@ import {parseSubtitles,measureSubtitleCue} from '@red-cup-engineering/computer-t
 import {bindMediaCell} from '@red-cup-engineering/computer-serialized-content-engineering-services-section/media-cell';
 import { address as signCellAddress } from "@red-cup-engineering/signcell";
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-const insist=(yes,msg)=>{if(!yes)throw new TypeError(msg)};
+
 const text=(v,label,max=2048)=>{
- insist(typeof v==='string'&&v.trim()&&v.length<=max,label+' requires bounded text');
+ assert(typeof v==='string'&&v.trim()&&v.length<=max,label+' requires bounded text');
  return v.trim();
 };
 const SHA=/^[a-f0-9]{64}$/u;
@@ -33,23 +34,23 @@ const auth=token=>({Authorization:'Bearer '+text(token,'temporary OAuth access t
 const json=async(response,label)=>{
  let result;
  try{result=await response.json()}catch{throw new Error(label+' did not return JSON')}
- insist(result!==null&&typeof result==='object'&&!Array.isArray(result),
+ assert(result!==null&&typeof result==='object'&&!Array.isArray(result),
   'invalid provider '+label+' response');
  return result;
 };
 const readActualAsset=(root,row)=>{
- insist(row&&typeof row.path==='string'&&!row.path.includes('\\')&&
+ assert(row&&typeof row.path==='string'&&!row.path.includes('\\')&&
   !row.path.split('/').some(part=>!part||part==='.'||part==='..'),
   'malformed accepted release asset path');
  const path=realpathSync(join(root,row.path));
  const rel=relative(root,path);
- insist(rel&&!rel.startsWith('..'+sep)&&rel!=='..'&&!isAbsolute(rel),
+ assert(rel&&!rel.startsWith('..'+sep)&&rel!=='..'&&!isAbsolute(rel),
   'release asset leaves its own accepted custody root');
  const info=statSync(path);
- insist(info.isFile()&&info.size===row.bytes&&info.size<=50_000_000,
+ assert(info.isFile()&&info.size===row.bytes&&info.size<=50_000_000,
   'source asset has wrong size or provider upload ceiling');
  const bytes=readFileSync(path);
- insist(SHA.test(row.sha256)&&sha(bytes)===row.sha256,
+ assert(SHA.test(row.sha256)&&sha(bytes)===row.sha256,
   'source release media bytes changed');
  return {path,bytes};
 };
@@ -66,7 +67,7 @@ const saveState=(file,object,initial=false)=>{
 };
 const readState=file=>{
  const obj=JSON.parse(readFileSync(file,'utf8'));
- insist(obj?.type==='YouTubePrivateFilmSidecarAttempt'&&obj.version===1&&
+ assert(obj?.type==='YouTubePrivateFilmSidecarAttempt'&&obj.version===1&&
   ['POST_ATTEMPTED','PROVIDER_RESPONDED','PROVIDER_READBACK'].includes(obj.state),
   'unrecognized private film sidecar state');
  return obj;
@@ -81,48 +82,48 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
  kind,language=null,authorization}={}){
  const root=realpathSync(resolve(text(releaseRoot,'finished film release directory',4000)));
  const source=readFileSync(join(root,'release.json'));
- insist(source.length<=500000,'release manifest too large for private publishing');
+ assert(source.length<=500000,'release manifest too large for private publishing');
  const m=JSON.parse(source.toString('utf8'));
- insist(m?.type==='MicrodramaReleasePackage'&&m.version===1&&
+ assert(m?.type==='MicrodramaReleasePackage'&&m.version===1&&
   m.state==='PRIVATE_MANUFACTURED_NOT_PUBLISHED'&&Array.isArray(m.assets),
   'publisher needs the private source-owned release, not a screenplay');
  const receipt=privateFilmReceipt;
- insist(receipt?.type==='YouTubePrivateFilmDraftReceipt'&&
+ assert(receipt?.type==='YouTubePrivateFilmDraftReceipt'&&
   receipt.state==='PROVIDER_VERIFIED_PRIVATE_NOT_PUBLIC'&&receipt.privacyStatus==='private',
   'sidecar delivery requires actual private YouTube video receiving');
- insist(CHANNEL.test(receipt.channelId)&&VIDEO.test(receipt.videoId),
+ assert(CHANNEL.test(receipt.channelId)&&VIDEO.test(receipt.videoId),
   'sidecar receipt lacks exact YouTube channel/video identity');
- insist(m.source?.originalFilmSha256===receipt.outputSha256&&SHA.test(receipt.outputSha256),
+ assert(m.source?.originalFilmSha256===receipt.outputSha256&&SHA.test(receipt.outputSha256),
   'publisher video is not the same accepted final master');
  const owning=text(m.edition?.consumer,'owning film customer');
- insist(authorization?.consumer===owning,'channel approval cannot transfer consumer rights');
- insist(authorization.channelId===receipt.channelId,
+ assert(authorization?.consumer===owning,'channel approval cannot transfer consumer rights');
+ assert(authorization.channelId===receipt.channelId,
   'sidecar channel authority differs from private film receipt');
  text(authorization.authorityRef,'sidecar receiving authority');
- insist(authorization.approvedPrivateSidecar===true,
+ assert(authorization.approvedPrivateSidecar===true,
   'private film sidecar requires explicit separate authorization');
- insist(authorization.originalFilmSha256===receipt.outputSha256,
+ assert(authorization.originalFilmSha256===receipt.outputSha256,
   'channel approval does not identify the exact finished film');
- insist(authorization.rightsRef===m.source.claims?.rightsRef,
+ assert(authorization.rightsRef===m.source.claims?.rightsRef,
   'sidecar rights authorization differs from original film');
- insist(['captions','poster'].includes(kind),'sidecar is captions or poster');
+ assert(['captions','poster'].includes(kind),'sidecar is captions or poster');
  const units=kind==='captions'?502:52;
- insist(Number.isSafeInteger(authorization.maxQuotaUnits)&&authorization.maxQuotaUnits>=units,
+ assert(Number.isSafeInteger(authorization.maxQuotaUnits)&&authorization.maxQuotaUnits>=units,
   'separate authorized YouTube quota is required for this sidecar');
- if(kind==='poster')insist(authorization.thumbnailEligibilityObserved===true,
+ if(kind==='poster')assert(authorization.thumbnailEligibilityObserved===true,
   'Shorts custom thumbnail eligibility requires actual channel observation');
  let file,track=null,name=null,captionSource=null;
  if(kind==='captions'){
-  insist(LANG.test(language),'exact caption language required');
+  assert(LANG.test(language),'exact caption language required');
   track=m.subtitleLanguages?.find(x=>x.language===language);
-  insist(track&&typeof track.reviewRef==='string'&&track.reviewRef.trim()&&
+  assert(track&&typeof track.reviewRef==='string'&&track.reviewRef.trim()&&
    typeof track.rightsRef==='string'&&track.rightsRef.trim(),
    'requested language has no independent translation/source rights review');
   const entry=m.assets.filter(x=>x.path==='captions/'+language+'.srt');
-  insist(entry.length===1&&entry[0].mimeType==='application/x-subrip',
+  assert(entry.length===1&&entry[0].mimeType==='application/x-subrip',
    'one source-owned reviewed SubRip file is required');
   file=readActualAsset(root,entry[0]);
-  insist(file.bytes.length>20&&file.bytes.length<2_000_000,
+  assert(file.bytes.length>20&&file.bytes.length<2_000_000,
    'YouTube caption upload requires bounded nonempty timed text');
   // Computer Text owns standard SRT/WebVTT syntax, not this network writer.
   // Decode strictly: replacement characters can otherwise obscure actual dialogue.
@@ -133,19 +134,19 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
   } catch(error) {
    throw new TypeError('source-owned SubRip captions are invalid: '+error.message);
   }
-  insist(parsed.format==='srt'&&parsed.cues.length>0,
+  assert(parsed.format==='srt'&&parsed.cues.length>0,
    'source-owned captions must be a genuine SubRip timed-text track');
   const cueIds=new Set();
   let lastCueStartTimeMilliseconds=-1;
   for(const [index,cue] of parsed.cues.entries()) {
-   insist(Number.isSafeInteger(cue.start)&&Number.isSafeInteger(cue.end)&&
+   assert(Number.isSafeInteger(cue.start)&&Number.isSafeInteger(cue.end)&&
     cue.start>=0&&cue.end>cue.start&&cue.start>=lastCueStartTimeMilliseconds,
     'SubRip cue timings must be positive and ordered by start time');
    lastCueStartTimeMilliseconds=cue.start;
-   insist(cue.id===String(index+1)&&!cueIds.has(cue.id),
+   assert(cue.id===String(index+1)&&!cueIds.has(cue.id),
     'SubRip cue numbers must be unique and sequential for YouTube upload');
    cueIds.add(cue.id);
-   insist(cue.lines.length>0&&cue.lines.some(line=>line.trim()!==''),
+   assert(cue.lines.length>0&&cue.lines.some(line=>line.trim()!==''),
     'SubRip cues cannot be empty');
   }
   // An exact-byte source is separately content-addressed from its typed
@@ -169,14 +170,14 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
    maximumCharactersPerSecond:Math.max(...parsed.cues.map(cue=>measureSubtitleCue(cue).charactersPerSecond))
   });
   name='561-'+language.replace(/[^a-zA-Z0-9-]/gu,'-').slice(0,30)+'-'+sha(file.bytes).slice(0,16);
-  insist(TITLE.test(name),'caption name is not stable');
+  assert(TITLE.test(name),'caption name is not stable');
  }else{
-  insist(language===null||language===undefined,'poster does not accept a caption language');
+  assert(language===null||language===undefined,'poster does not accept a caption language');
   const entry=m.assets.filter(x=>x.path==='poster.jpg');
-  insist(entry.length===1&&entry[0].mimeType==='image/jpeg',
+  assert(entry.length===1&&entry[0].mimeType==='image/jpeg',
    'one source-owned original frame poster is required');
   file=readActualAsset(root,entry[0]);
-  insist(file.bytes.length>=1024&&file.bytes[0]===255&&file.bytes[1]===216&&
+  assert(file.bytes.length>=1024&&file.bytes[0]===255&&file.bytes[1]===216&&
    file.bytes[2]===255,'source poster lacks JPEG signature');
  }
  const selection={
@@ -199,14 +200,14 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
 }
 async function verifySameFile(plan){
  const {filePath,fingerprint,...selection}=plan;
- insist(sha(Buffer.from(JSON.stringify(selection)))===fingerprint,
+ assert(sha(Buffer.from(JSON.stringify(selection)))===fingerprint,
   'source-owned sidecar plan changed after preparation');
  const actual=readFileSync(plan.filePath);
- insist(actual.length===plan.assetBytes&&sha(actual)===plan.assetSha256,
+ assert(actual.length===plan.assetBytes&&sha(actual)===plan.assetSha256,
   'finished-film sidecar source changed before provider write');
  if(plan.kind==='captions'){
   const claimed=plan.captionSource;
-  insist(claimed?.type==='StandardsCaptionSourceBinding'&&claimed.schemaVersion===1&&
+  assert(claimed?.type==='StandardsCaptionSourceBinding'&&claimed.schemaVersion===1&&
    claimed.mediaType==='application/x-subrip'&&
    claimed.formatPredicate==='http://purl.org/dc/terms/format'&&claimed.cueCount>0,
    'caption plan lacks standard-data and SignCell source identity');
@@ -216,7 +217,7 @@ async function verifySameFile(plan){
    mediaType:'application/x-subrip',
    formatPredicate:'http://purl.org/dc/terms/format'
   });
-  insist(claimed.sourceContentNi===media.resource.address&&
+  assert(claimed.sourceContentNi===media.resource.address&&
    claimed.formatClaimNi===signCellAddress(media.formatCell),
    'caption source-byte or format-cell identity disagrees with actual media');
  }
@@ -227,13 +228,13 @@ async function verifyPrivateVideo({plan,token,fetch}){
   {method:'GET',headers:auth(token),redirect:'error'});
  if(!channels.ok)throw new Error('YouTube owner identity HTTP '+channels.status);
  const owners=await json(channels,'channels.list');
- insist(owners.items?.some(x=>x.id===plan.channelId),'current OAuth owner differs from approved channel');
+ assert(owners.items?.some(x=>x.id===plan.channelId),'current OAuth owner differs from approved channel');
  const endpoint='https://www.googleapis.com/youtube/v3/videos?part=snippet,status&id='+encodeURIComponent(plan.videoId);
  const video=await fetch(endpoint,{method:'GET',headers:auth(token),redirect:'error'});
  if(!video.ok)throw new Error('YouTube private source readback HTTP '+video.status);
  const data=await json(video,'videos.list');
  const item=data.items?.find(x=>x.id===plan.videoId);
- insist(item?.snippet?.channelId===plan.channelId&&item?.status?.privacyStatus==='private',
+ assert(item?.snippet?.channelId===plan.channelId&&item?.status?.privacyStatus==='private',
   'sidecar upload cannot change or address a nonprivate/foreign film');
 }
 async function providerCaptions({plan,token,fetch}){
@@ -244,16 +245,16 @@ async function providerCaptions({plan,token,fetch}){
  const rows=(await json(response,'captions.list')).items??[];
  const matching=rows.filter(x=>x.snippet?.videoId===plan.videoId&&
   x.snippet?.language===plan.language&&x.snippet?.name===plan.captionName);
- insist(matching.length<=1,'multiple indistinguishable remote caption tracks require review');
+ assert(matching.length<=1,'multiple indistinguishable remote caption tracks require review');
  return matching[0]??null;
 }
 function captionReceipt(plan,row){
- insist(typeof row?.id==='string'&&row.id.trim(),
+ assert(typeof row?.id==='string'&&row.id.trim(),
   'YouTube caption has no provider track identifier');
- insist(row.snippet?.language===plan.language&&row.snippet?.name===plan.captionName&&
+ assert(row.snippet?.language===plan.language&&row.snippet?.name===plan.captionName&&
   row.snippet?.videoId===plan.videoId,
   'captions provider record changed its source-bound identity');
- insist(row.snippet?.isDraft!==false,'sidecar captions were not retained as PRIVATE draft');
+ assert(row.snippet?.isDraft!==false,'sidecar captions were not retained as PRIVATE draft');
  return Object.freeze({type:'YouTubePrivateFilmSidecarReceipt',version:1,
   kind:'captions',status:'PROVIDER_LISTED_DRAFT_BYTES_NOT_ATTESTED',
   channelId:plan.channelId,videoId:plan.videoId,
@@ -265,7 +266,7 @@ function captionReceipt(plan,row){
 }
 function thumbnailReceipt(plan,row){
  const sizes=row?.items?.[0];
- insist(sizes&&Object.values(sizes).some(x=>typeof x?.url==='string'),
+ assert(sizes&&Object.values(sizes).some(x=>typeof x?.url==='string'),
   'YouTube thumbnails.set did not return actual image metadata');
  return Object.freeze({type:'YouTubePrivateFilmSidecarReceipt',version:1,
   kind:'poster',status:'PROVIDER_THUMBNAIL_RESPONSE_BYTES_NOT_ATTESTED',
@@ -292,14 +293,14 @@ const multipartCaption=({plan,bytes})=>{
  * API; ambiguous thumbnails remain held for channel-owner reconciliation.
  */
 export async function startPrivateFilmSidecar({plan,stateFile,token,fetch=globalThis.fetch}={}){
- insist(plan?.type==='YouTubePrivateFilmSidecarPlan','prepared real source sidecar required');
- insist(typeof fetch==='function','YouTube provider client required');
+ assert(plan?.type==='YouTubePrivateFilmSidecarPlan','prepared real source sidecar required');
+ assert(typeof fetch==='function','YouTube provider client required');
  const path=resolve(text(stateFile,'private sidecar state',4000));
  const bytes=await verifySameFile(plan);
  await verifyPrivateVideo({plan,token,fetch});
  if(plan.kind==='captions'){
   const existing=await providerCaptions({plan,token,fetch});
-  insist(!existing,'the exact named caption is already present; reconcile it, not a duplicate insert');
+  assert(!existing,'the exact named caption is already present; reconcile it, not a duplicate insert');
  }
  const state={type:'YouTubePrivateFilmSidecarAttempt',version:1,
   state:'POST_ATTEMPTED',sourceFingerprint:plan.fingerprint,kind:plan.kind,
@@ -325,7 +326,7 @@ export async function startPrivateFilmSidecar({plan,stateFile,token,fetch=global
  if(plan.kind==='captions'){
   // Provider already returned the exact track ID; record it before the
   // subsequent read, preserving identity if a later GET fails.
-  insist(typeof body.id==='string'&&body.id.trim(),
+  assert(typeof body.id==='string'&&body.id.trim(),
    'YouTube did not return the uploaded caption identity');
   saveState(path,{...state,state:'PROVIDER_RESPONDED',remoteId:body.id});
   return reconcilePrivateFilmSidecar({plan,stateFile:path,token,fetch});
@@ -336,24 +337,24 @@ export async function startPrivateFilmSidecar({plan,stateFile,token,fetch=global
 }
 export async function reconcilePrivateFilmSidecar({plan,stateFile,token,
  fetch=globalThis.fetch}={}){
- insist(plan?.type==='YouTubePrivateFilmSidecarPlan','source package sidecar required');
+ assert(plan?.type==='YouTubePrivateFilmSidecarPlan','source package sidecar required');
  const path=resolve(text(stateFile,'private sidecar state',4000));
  await verifySameFile(plan);
  const lock=path+'.lock',fd=openSync(lock,'wx',0o600);
  try{
   const current=readState(path);
-  insist(current.sourceFingerprint===plan.fingerprint&&current.kind===plan.kind&&
+  assert(current.sourceFingerprint===plan.fingerprint&&current.kind===plan.kind&&
    current.videoId===plan.videoId&&current.assetSha256===plan.assetSha256&&
    current.channelId===plan.channelId,
    'sidecar state belongs to another accepted source or channel');
   await verifyPrivateVideo({plan,token,fetch});
   if(plan.kind==='poster'){
-   insist(current.state==='PROVIDER_READBACK','thumbnail outcome unknown; owner must reconcile in YouTube Studio');
+   assert(current.state==='PROVIDER_READBACK','thumbnail outcome unknown; owner must reconcile in YouTube Studio');
    return current.receipt;
   }
   const track=await providerCaptions({plan,token,fetch});
-  insist(track,'YouTube does not yet list the source-named caption; manual reconciliation required');
-  if(current.remoteId)insist(track.id===current.remoteId,
+  assert(track,'YouTube does not yet list the source-named caption; manual reconciliation required');
+  if(current.remoteId)assert(track.id===current.remoteId,
    'the remotely listed caption differs from submitted provider ID');
   const receipt=captionReceipt(plan,track);
   saveState(path,{...current,state:'PROVIDER_READBACK',remoteId:track.id,receipt});
