@@ -1,3 +1,4 @@
+import { sha256Hex } from "@red-cup-engineering/semiotic-content-address-system";
 import { assert } from "@red-cup-engineering/signcell/values";
 /**
  * Finish an ALREADY VERIFIED PRIVATE YouTube film with real captions and an
@@ -19,7 +20,7 @@ import {resolve,join,relative,sep,isAbsolute} from 'node:path';
 import {parseSubtitles,measureSubtitleCue} from '@red-cup-engineering/computer-text-content-engineering-services-section/subtitles';
 import {bindMediaCell} from '@red-cup-engineering/computer-serialized-content-engineering-services-section/media-cell';
 import { address as signCellAddress } from "@red-cup-engineering/signcell";
-const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+
 
 const text=(v,label,max=2048)=>{
  assert(typeof v==='string'&&v.trim()&&v.length<=max,label+' requires bounded text');
@@ -50,7 +51,7 @@ const readActualAsset=(root,row)=>{
  assert(info.isFile()&&info.size===row.bytes&&info.size<=50_000_000,
   'source asset has wrong size or provider upload ceiling');
  const bytes=readFileSync(path);
- assert(SHA.test(row.sha256)&&sha(bytes)===row.sha256,
+ assert(SHA.test(row.sha256)&&sha256Hex(bytes)===row.sha256,
   'source release media bytes changed');
  return {path,bytes};
 };
@@ -155,7 +156,7 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
   const carried=bindMediaCell(Uint8Array.from(file.bytes),{
    mediaType:'application/x-subrip',
    formatPredicate:'http://purl.org/dc/terms/format',
-   source:{releaseManifestSha256:sha(source),assetPath:entry[0].path,
+   source:{releaseManifestSha256:sha256Hex(source),assetPath:entry[0].path,
     subtitleReviewRef:track.reviewRef,rightsRef:track.rightsRef}
   });
   captionSource=Object.freeze({
@@ -169,7 +170,7 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
    lastCueEndTimeMilliseconds:Math.max(...parsed.cues.map(cue=>cue.end)),
    maximumCharactersPerSecond:Math.max(...parsed.cues.map(cue=>measureSubtitleCue(cue).charactersPerSecond))
   });
-  name='561-'+language.replace(/[^a-zA-Z0-9-]/gu,'-').slice(0,30)+'-'+sha(file.bytes).slice(0,16);
+  name='561-'+language.replace(/[^a-zA-Z0-9-]/gu,'-').slice(0,30)+'-'+sha256Hex(file.bytes).slice(0,16);
   assert(TITLE.test(name),'caption name is not stable');
  }else{
   assert(language===null||language===undefined,'poster does not accept a caption language');
@@ -185,9 +186,9 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
   status:'PRIVATE_SIDECAR_PROPOSED_NOT_SUBMITTED',
   kind,language:kind==='captions'?language:null,
   captionName:name,channelId:receipt.channelId,videoId:receipt.videoId,
-  sourceFilmSha256:receipt.outputSha256,assetSha256:sha(file.bytes),
+  sourceFilmSha256:receipt.outputSha256,assetSha256:sha256Hex(file.bytes),
   assetBytes:file.bytes.length,
-  releaseManifestSha256:sha(source),
+  releaseManifestSha256:sha256Hex(source),
   sourceClaimRef:m.source.claims.independentEditorialReview,
   rightsClaimRef:m.source.claims.rightsRef,
   ...(track?{subtitleReviewRef:track.reviewRef}:{}),
@@ -196,14 +197,14 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
   note:'Provider-listed captions/thumbnail do not prove exact uploaded bytes; private video remains private and unmonetized.'
  };
  return Object.freeze({...selection,filePath:file.path,
-  fingerprint:sha(Buffer.from(JSON.stringify(selection)))});
+  fingerprint:sha256Hex(Buffer.from(JSON.stringify(selection)))});
 }
 async function verifySameFile(plan){
  const {filePath,fingerprint,...selection}=plan;
- assert(sha(Buffer.from(JSON.stringify(selection)))===fingerprint,
+ assert(sha256Hex(Buffer.from(JSON.stringify(selection)))===fingerprint,
   'source-owned sidecar plan changed after preparation');
  const actual=readFileSync(plan.filePath);
- assert(actual.length===plan.assetBytes&&sha(actual)===plan.assetSha256,
+ assert(actual.length===plan.assetBytes&&sha256Hex(actual)===plan.assetSha256,
   'finished-film sidecar source changed before provider write');
  if(plan.kind==='captions'){
   const claimed=plan.captionSource;

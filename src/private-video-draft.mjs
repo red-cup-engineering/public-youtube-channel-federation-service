@@ -1,3 +1,4 @@
+import { sha256Hex } from "@red-cup-engineering/semiotic-content-address-system";
 import { assert, isRecord } from "@red-cup-engineering/signcell/values";
 /**
  * PRIVATE draft YouTube upload of real, rights-reviewed cinematic media.
@@ -28,7 +29,7 @@ const txt=(v,label,max=2048)=>{
  assert(typeof v==='string'&&v.trim()&&v.length<=max,label+' requires bounded nonempty text');
  return v.trim();
 };
-const hash=x=>createHash('sha256').update(x).digest('hex');
+
 const shaFile=async file=>{
  const h=createHash('sha256');
  for await(const block of createReadStream(file))h.update(block);
@@ -137,7 +138,7 @@ export function prepareYouTubePrivateDraft({rendition,review,publication,metadat
  return Object.freeze({type:'YouTubePrivateFilmDraftPlan',
   state:'PREPARED_NOT_SUBMITTED',
   mediaFile:film,bytes:info.size,filmSha256:filmSha,
-  channelId,sourceFingerprint:hash(JSON.stringify(claims)),
+  channelId,sourceFingerprint:sha256Hex(JSON.stringify(claims)),
   uploadBody:Object.freeze(uploadBody),
   note:'A prepared private upload is neither authenticated rights evidence nor an uploaded or published YouTube video.'});
 }
