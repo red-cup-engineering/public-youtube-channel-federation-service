@@ -81,10 +81,10 @@ export async function admitPortfolioSnapshot({ civilDay, deliveries = [] } = {},
   } finally { rmSync(lock, { recursive: true, force: true }); }
 }
 
-export function formProcurementOpportunities(snapshot, offeredAt = new Date().toISOString()) {
+export function formPurchasingOpportunities(snapshot, offeredAt = new Date().toISOString()) {
   if (!exactId(snapshot) || snapshot.type !== "FiveChannelPortfolioSnapshot" || snapshot.federation !== ACTOR || !Number.isFinite(Date.parse(offeredAt))) throw new TypeError("opportunities require an exact federation snapshot");
   return snapshot.reports.filter((report) => report.generationDeficit + report.releasePlanDeficit + report.publicationDeficit + report.bufferDeficitDays > 0).map((report) => {
-    const object = { type: "ChannelPortfolioProcurementOpportunity", snapshot: snapshot.id, civilDay: snapshot.civilDay, channel: report.channel, line: report.line, deficits: { generationUnits: report.generationDeficit, releasePlanUnits: report.releasePlanDeficit, publicationUnits: report.publicationDeficit, bufferDays: report.bufferDeficitDays }, suggestedResponse: "channel-may-form-own-provider-neutral-procurement", spendingAuthority: "none", dispatchAuthority: "none", channelWriteAuthority: "none" };
+    const object = { type: "ChannelPortfolioPurchasingOpportunity", snapshot: snapshot.id, civilDay: snapshot.civilDay, channel: report.channel, line: report.line, deficits: { generationUnits: report.generationDeficit, releasePlanUnits: report.releasePlanDeficit, publicationUnits: report.publicationDeficit, bufferDays: report.bufferDeficitDays }, suggestedResponse: "channel-may-form-own-provider-neutral-procurement", spendingAuthority: "none", dispatchAuthority: "none", channelWriteAuthority: "none" };
     const body = { type: "Offer", actor: ACTOR, target: report.channel, object, published: offeredAt }; return { id: contentId(body), ...body };
   });
 }

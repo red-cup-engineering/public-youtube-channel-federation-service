@@ -79,7 +79,7 @@ const readState=file=>{
  * Caption insert is listed at 400 quota units and each caption listing at 50;
  * thumbnail set around 50. These are estimates, NOT observed account charges.
  */
-export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
+export function preparePrivateFilmSidecar({releaseRoot,privateFilmRecord,
  kind,language=null,authorization}={}){
  const root=realpathSync(resolve(text(releaseRoot,'finished film release directory',4000)));
  const source=readFileSync(join(root,'release.json'));
@@ -88,22 +88,22 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
  assert(m?.type==='MicrodramaReleasePackage'&&m.version===1&&
   m.state==='PRIVATE_MANUFACTURED_NOT_PUBLISHED'&&Array.isArray(m.assets),
   'publisher needs the private source-owned release, not a screenplay');
- const receipt=privateFilmReceipt;
- assert(receipt?.type==='YouTubePrivateFilmDraftReceipt'&&
-  receipt.state==='PROVIDER_VERIFIED_PRIVATE_NOT_PUBLIC'&&receipt.privacyStatus==='private',
+ const record=privateFilmRecord;
+ assert(record?.type==='YouTubePrivateFilmDraftReceipt'&&
+  record.state==='PROVIDER_VERIFIED_PRIVATE_NOT_PUBLIC'&&record.privacyStatus==='private',
   'sidecar delivery requires actual private YouTube video receiving');
- assert(CHANNEL.test(receipt.channelId)&&VIDEO.test(receipt.videoId),
+ assert(CHANNEL.test(record.channelId)&&VIDEO.test(record.videoId),
   'sidecar receipt lacks exact YouTube channel/video identity');
- assert(m.source?.originalFilmSha256===receipt.outputSha256&&SHA.test(receipt.outputSha256),
+ assert(m.source?.originalFilmSha256===record.outputSha256&&SHA.test(record.outputSha256),
   'publisher video is not the same accepted final master');
  const owning=text(m.edition?.consumer,'owning film customer');
  assert(authorization?.consumer===owning,'channel approval cannot transfer consumer rights');
- assert(authorization.channelId===receipt.channelId,
+ assert(authorization.channelId===record.channelId,
   'sidecar channel authority differs from private film receipt');
  text(authorization.authorityRef,'sidecar receiving authority');
  assert(authorization.approvedPrivateSidecar===true,
   'private film sidecar requires explicit separate authorization');
- assert(authorization.originalFilmSha256===receipt.outputSha256,
+ assert(authorization.originalFilmSha256===record.outputSha256,
   'channel approval does not identify the exact finished film');
  assert(authorization.rightsRef===m.source.claims?.rightsRef,
   'sidecar rights authorization differs from original film');
@@ -185,8 +185,8 @@ export function preparePrivateFilmSidecar({releaseRoot,privateFilmReceipt,
   type:'YouTubePrivateFilmSidecarPlan',version:1,
   status:'PRIVATE_SIDECAR_PROPOSED_NOT_SUBMITTED',
   kind,language:kind==='captions'?language:null,
-  captionName:name,channelId:receipt.channelId,videoId:receipt.videoId,
-  sourceFilmSha256:receipt.outputSha256,assetSha256:sha256Hex(file.bytes),
+  captionName:name,channelId:record.channelId,videoId:record.videoId,
+  sourceFilmSha256:record.outputSha256,assetSha256:sha256Hex(file.bytes),
   assetBytes:file.bytes.length,
   releaseManifestSha256:sha256Hex(source),
   sourceClaimRef:m.source.claims.independentEditorialReview,
@@ -249,14 +249,14 @@ async function providerCaptions({plan,token,fetch}){
  assert(matching.length<=1,'multiple indistinguishable remote caption tracks require review');
  return matching[0]??null;
 }
-function captionReceipt(plan,row){
+function captionRecord(plan,row){
  assert(typeof row?.id==='string'&&row.id.trim(),
   'YouTube caption has no provider track identifier');
  assert(row.snippet?.language===plan.language&&row.snippet?.name===plan.captionName&&
   row.snippet?.videoId===plan.videoId,
   'captions provider record changed its source-bound identity');
  assert(row.snippet?.isDraft!==false,'sidecar captions were not retained as PRIVATE draft');
- return Object.freeze({type:'YouTubePrivateFilmSidecarReceipt',version:1,
+ return Object.freeze({type:'YouTubePrivateFilmSidecarRecord',version:1,
   kind:'captions',status:'PROVIDER_LISTED_DRAFT_BYTES_NOT_ATTESTED',
   channelId:plan.channelId,videoId:plan.videoId,
   assetSha256:plan.assetSha256,language:plan.language,
@@ -265,11 +265,11 @@ function captionReceipt(plan,row){
   providerStatus:row.snippet?.status??'unknown',captionName:plan.captionName,
   note:'Provider lists a source-named track, not a cryptographic proof that its text bytes are identical to the uploaded SRT.'});
 }
-function thumbnailReceipt(plan,row){
+function thumbnailRecord(plan,row){
  const sizes=row?.items?.[0];
  assert(sizes&&Object.values(sizes).some(x=>typeof x?.url==='string'),
   'YouTube thumbnails.set did not return actual image metadata');
- return Object.freeze({type:'YouTubePrivateFilmSidecarReceipt',version:1,
+ return Object.freeze({type:'YouTubePrivateFilmSidecarRecord',version:1,
   kind:'poster',status:'PROVIDER_THUMBNAIL_RESPONSE_BYTES_NOT_ATTESTED',
   channelId:plan.channelId,videoId:plan.videoId,
   assetSha256:plan.assetSha256,
@@ -332,7 +332,7 @@ export async function startPrivateFilmSidecar({plan,stateFile,token,fetch=global
   saveState(path,{...state,state:'PROVIDER_RESPONDED',remoteId:body.id});
   return reconcilePrivateFilmSidecar({plan,stateFile:path,token,fetch});
  }
- const receipt=thumbnailReceipt(plan,body);
+ const receipt=thumbnailRecord(plan,body);
  saveState(path,{...state,state:'PROVIDER_READBACK',receipt});
  return receipt;
 }
@@ -357,7 +357,7 @@ export async function reconcilePrivateFilmSidecar({plan,stateFile,token,
   assert(track,'YouTube does not yet list the source-named caption; manual reconciliation required');
   if(current.remoteId)assert(track.id===current.remoteId,
    'the remotely listed caption differs from submitted provider ID');
-  const receipt=captionReceipt(plan,track);
+  const receipt=captionRecord(plan,track);
   saveState(path,{...current,state:'PROVIDER_READBACK',remoteId:track.id,receipt});
   return receipt;
  }finally{closeSync(fd);rmSync(lock,{force:true})}
