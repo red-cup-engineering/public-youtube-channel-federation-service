@@ -1,6 +1,7 @@
+import { EMPTY_WITNESS_ROOT, identifyJsonSemanticContent } from "@red-cup-engineering/semantic-content-identify-service";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { NODE_ROOT, contentId } from "./federation.mjs";
+import { NODE_ROOT } from "./federation.mjs";
 const WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 export function loadExpansion(path = join(NODE_ROOT, "content/proposals/five-channel-expansion.json")) { return JSON.parse(readFileSync(path, "utf8")); }
 export function checkExpansion(proposal = loadExpansion(), assayedAt = new Date().toISOString()) {
@@ -19,5 +20,5 @@ export function checkExpansion(proposal = loadExpansion(), assayedAt = new Date(
   const required = ["researchProductId", "owner", "sourceCorpusDigest", "correctionIdentity", "reuseGrant", "priceAndSettlementReceipt"]; if (required.some((field) => !proposal.researchEconomy?.requiredProductFields?.includes(field)) || proposal.notebookTopology?.rule?.includes("distinct persistent-notebook settlement") !== true) throw new TypeError("proposal lacks atomic research reuse or notebook separation");
   if (!Array.isArray(proposal.authorityWithheld) || !proposal.authorityWithheld.includes("no generation, upload, schedule, publication, or Course designation") || !Number.isFinite(Date.parse(assayedAt))) throw new TypeError("proposal does not withhold effects or assay time is invalid");
   const body = { type: "FiveChannelExpansionCheck", proposalVersion: proposal.version, status: "feasible-provisional-not-activated", perDay, newPerDay, weeklyTotal, weeklyCinematic: capacity.weeklyCinematic, minimumDailyHeadroom: capacity.minimumDailyHeadroom, unboundChannels: proposal.portfolio.filter((line) => line.publicIdentityStatus !== "bound").map((line) => line.channel), authorityGranted: [], assayedAt };
-  return { id: contentId(body), ...body };
+  return { id: identifyJsonSemanticContent({ objectKind: "emsweb.video-federation.record", value: body, witnessRoot: EMPTY_WITNESS_ROOT }).token, ...body };
 }
