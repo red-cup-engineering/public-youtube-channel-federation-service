@@ -1,5 +1,4 @@
 import { EMPTY_WITNESS_ROOT, identifyJsonSemanticContent } from "@red-cup-engineering/semantic-content-identify-service";
-import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createSettlementStore } from "@red-cup-engineering/settlement-record-store-service";
@@ -8,10 +7,7 @@ import { addressChannelPortfolioRecord } from "@red-cup-engineering/a2a-channel-
 import { ACTOR, NODE_ROOT } from "./identity.mjs";
 
 export { ACTOR, NODE_ROOT } from "./identity.mjs";
-export function canonical(value) { if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`; if (value && typeof value === "object") return `{${Object.keys(value).sort().filter((key) => value[key] !== undefined).map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`; return JSON.stringify(value); }
-export function digest(value) { return `sha256:${createHash("sha256").update(canonical(value)).digest("hex")}`; }
-export function contentId(value) { return identifyJsonSemanticContent({ objectKind: "emsweb.video-federation.record", value: value, witnessRoot: EMPTY_WITNESS_ROOT }).token; }
-function exactId(value) { if (!value || typeof value !== "object") return false; const { id, ...body } = value; return id === contentId(body); }
+function exactId(value) { if (!value || typeof value !== "object") return false; const { id, ...body } = value; return id === identifyJsonSemanticContent({ objectKind: "emsweb.video-federation.record", value: body, witnessRoot: EMPTY_WITNESS_ROOT }).token; }
 function exactChannelPortfolioRecord(value) { if (!value || typeof value !== "object") return false; const { id, ...body } = value; try { return id === addressChannelPortfolioRecord(body).id; } catch { return false; } }
 function covenant() { return JSON.parse(readFileSync(join(NODE_ROOT, "content/config/covenant.json"), "utf8")); }
 function day(value) { return /^\d{4}-\d{2}-\d{2}$/u.test(value ?? ""); }
@@ -77,7 +73,7 @@ export async function admitPortfolioSnapshot({ civilDay, deliveries = [] } = {},
       return rows[0];
     }
     const body = { type: "FiveChannelPortfolioSnapshot", federation: ACTOR, covenantVersion: contract.version, civilDay, timezone: contract.timezone, reports, portfolioDeficits: { generationUnits: reports.reduce((sum, entry) => sum + entry.generationDeficit, 0), releasePlanUnits: reports.reduce((sum, entry) => sum + entry.releasePlanDeficit, 0), publicationUnits: reports.reduce((sum, entry) => sum + entry.publicationDeficit, 0), bufferDays: reports.reduce((sum, entry) => sum + entry.bufferDeficitDays, 0) }, authorityWithheld: [...contract.authorityWithheld], admittedAt: options.at ?? new Date().toISOString() };
-    const snapshot = { id: contentId(body), ...body }; await record(snapshot, options); return snapshot;
+    const snapshot = { id: identifyJsonSemanticContent({ objectKind: "emsweb.video-federation.record", value: body, witnessRoot: EMPTY_WITNESS_ROOT }).token, ...body }; await record(snapshot, options); return snapshot;
   } finally { rmSync(lock, { recursive: true, force: true }); }
 }
 
@@ -85,6 +81,6 @@ export function formPurchasingOpportunities(snapshot, offeredAt = new Date().toI
   if (!exactId(snapshot) || snapshot.type !== "FiveChannelPortfolioSnapshot" || snapshot.federation !== ACTOR || !Number.isFinite(Date.parse(offeredAt))) throw new TypeError("opportunities require an exact federation snapshot");
   return snapshot.reports.filter((report) => report.generationDeficit + report.releasePlanDeficit + report.publicationDeficit + report.bufferDeficitDays > 0).map((report) => {
     const object = { type: "ChannelPortfolioPurchasingOpportunity", snapshot: snapshot.id, civilDay: snapshot.civilDay, channel: report.channel, line: report.line, deficits: { generationUnits: report.generationDeficit, releasePlanUnits: report.releasePlanDeficit, publicationUnits: report.publicationDeficit, bufferDays: report.bufferDeficitDays }, suggestedResponse: "channel-may-form-own-provider-neutral-procurement", spendingAuthority: "none", dispatchAuthority: "none", channelWriteAuthority: "none" };
-    const body = { type: "Offer", actor: ACTOR, target: report.channel, object, published: offeredAt }; return { id: contentId(body), ...body };
+    const body = { type: "Offer", actor: ACTOR, target: report.channel, object, published: offeredAt }; return { id: identifyJsonSemanticContent({ objectKind: "emsweb.video-federation.record", value: body, witnessRoot: EMPTY_WITNESS_ROOT }).token, ...body };
   });
 }

@@ -13,7 +13,7 @@ import { assert } from "@red-cup-engineering/signcell/values";
  * https://developers.google.com/youtube/v3/docs/captions/list
  * https://developers.google.com/youtube/v3/docs/thumbnails/set
  */
-import {createHash,randomUUID} from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import {readFileSync,realpathSync,statSync,openSync,closeSync,writeFileSync,
  renameSync,rmSync} from 'node:fs';
 import {resolve,join,relative,sep,isAbsolute} from 'node:path';

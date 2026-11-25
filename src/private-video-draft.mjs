@@ -1,4 +1,4 @@
-import { sha256Hex } from "@red-cup-engineering/semiotic-content-address-system";
+import { Sha256Stream, sha256Hex } from "@red-cup-engineering/semiotic-content-address-system";
 import { assert, isRecord } from "@red-cup-engineering/signcell/values";
 /**
  * PRIVATE draft YouTube upload of real, rights-reviewed cinematic media.
@@ -9,7 +9,7 @@ import { assert, isRecord } from "@red-cup-engineering/signcell/values";
  *
  * https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol
  */
-import {createHash,randomUUID} from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import {createReadStream,existsSync,openSync,closeSync,readSync,
   readFileSync,writeFileSync,renameSync,rmSync,realpathSync,statSync} from 'node:fs';
 import {open} from 'node:fs/promises';
@@ -31,9 +31,9 @@ const txt=(v,label,max=2048)=>{
 };
 
 const shaFile=async file=>{
- const h=createHash('sha256');
+ const h=new Sha256Stream();
  for await(const block of createReadStream(file))h.update(block);
- return h.digest('hex');
+ return h.digestHex();
 };
 const auth=token=>({Authorization:'Bearer '+txt(token,'OAuth token',10000)});
 const responseJson=async(response,label)=>{
